@@ -3,7 +3,7 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules', 'dist', '.pnpm-store', 'eslint.config.js'],
+    ignores: ['node_modules', 'dist', '.pnpm-store', 'eslint.config.js', 'vite.config.ts'],
   },
   {
     files: ['**/*.ts'],
