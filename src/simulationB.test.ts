@@ -1,30 +1,25 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-  createSimulationBState,
-  startJump,
-  update,
-  reset,
-} from "./simulationB";
-import { CHARACTER_SIZE, GROUND_Y, MAX_HEIGHT } from "./constants";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createSimulationBState, startJump, update, reset } from './simulationB';
+import { CHARACTER_SIZE, GROUND_Y, MAX_HEIGHT } from './constants';
 
 // シミュレーション本体と同じ境界値をテストにも共有しておく
 const GROUND_CONTACT_Y = GROUND_Y - CHARACTER_SIZE;
 const APEX_Y = GROUND_CONTACT_Y - MAX_HEIGHT;
 
-describe("simulationB", () => {
-  let state = createSimulationBState();
+describe('simulationB', () => {
+  const state = createSimulationBState();
 
   beforeEach(() => {
     reset(state);
   });
 
-  it("starts grounded with zero velocity", () => {
+  it('starts grounded with zero velocity', () => {
     expect(state.isGrounded).toBe(true);
     expect(state.velocity.y).toBe(0);
     expect(state.position.y).toBe(GROUND_CONTACT_Y);
   });
 
-  it("applies initial jump force only when grounded", () => {
+  it('applies initial jump force only when grounded', () => {
     startJump(state);
     expect(state.isGrounded).toBe(false);
     expect(state.velocity.y).toBeLessThan(0);
@@ -34,7 +29,7 @@ describe("simulationB", () => {
     expect(state.velocity.y).toBe(firstVelocity); // unchanged mid-air
   });
 
-  it("reaches approximately the target apex height", () => {
+  it('reaches approximately the target apex height', () => {
     startJump(state);
     const dt = 0.005;
     let elapsed = 0;
@@ -50,7 +45,7 @@ describe("simulationB", () => {
     expect(minY).toBeGreaterThanOrEqual(APEX_Y - 5);
   });
 
-  it("falls back and lands with zero velocity", () => {
+  it('falls back and lands with zero velocity', () => {
     startJump(state);
     const dt = 0.05;
     let elapsed = 0;

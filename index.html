@@ -1,44 +1,42 @@
 <!doctype html>
 <html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ジャンプの比較シミュレーション</title>
+    <link rel="stylesheet" href="/styles/main.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ジャンプの比較シミュレーション</title>
-  <link rel="stylesheet" href="/styles/main.css" />
-</head>
+  <body>
+    <div class="container">
+      <h1>ジャンプの比較シミュレーション</h1>
 
-<body>
-  <div class="container">
-    <h1>ジャンプの比較シミュレーション</h1>
+      <div class="simulations">
+        <div class="simulation-panel">
+          <h2>A</h2>
+          <canvas id="canvas-a" width="400" height="500"></canvas>
+          <div class="info" id="info-a"></div>
+          <div class="panel-actions">
+            <button id="jump-btn-a">Aだけジャンプ</button>
+          </div>
+        </div>
 
-    <div class="simulations">
-      <div class="simulation-panel">
-        <h2>A</h2>
-        <canvas id="canvas-a" width="400" height="500"></canvas>
-        <div class="info" id="info-a"></div>
-        <div class="panel-actions">
-          <button id="jump-btn-a">Aだけジャンプ</button>
+        <div class="simulation-panel">
+          <h2>B</h2>
+          <canvas id="canvas-b" width="400" height="500"></canvas>
+          <div class="info" id="info-b"></div>
+          <div class="panel-actions">
+            <button id="jump-btn-b">Bだけジャンプ</button>
+          </div>
         </div>
       </div>
 
-      <div class="simulation-panel">
-        <h2>B</h2>
-        <canvas id="canvas-b" width="400" height="500"></canvas>
-        <div class="info" id="info-b"></div>
-        <div class="panel-actions">
-          <button id="jump-btn-b">Bだけジャンプ</button>
-        </div>
+      <div class="controls">
+        <button id="jump-btn">両方ジャンプ</button>
+        <button id="reset-btn">リセット</button>
       </div>
     </div>
 
-    <div class="controls">
-      <button id="jump-btn">両方ジャンプ</button>
-      <button id="reset-btn">リセット</button>
-    </div>
-  </div>
-
-  <script type="module" src="/src/main.ts"></script>
-</body>
-
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

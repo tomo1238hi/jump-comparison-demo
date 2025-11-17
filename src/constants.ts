@@ -5,8 +5,8 @@ export const JUMP_FORCE = Math.sqrt(2 * GRAVITY * MAX_HEIGHT); // px/s (matches 
 export const GROUND_Y = 400; // px (ground baseline on canvas)
 
 export const CHARACTER_SIZE = 28; // px (radius of character marker)
-export const CHARACTER_COLOR_A = "#FF6B6B";
-export const CHARACTER_COLOR_B = "#4ECDC4";
+export const CHARACTER_COLOR_A = '#FF6B6B';
+export const CHARACTER_COLOR_B = '#4ECDC4';
 
 export const CANVAS_WIDTH = 400;
 export const CANVAS_HEIGHT = 500;

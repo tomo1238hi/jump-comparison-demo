@@ -6,8 +6,8 @@ import {
   MAX_HEIGHT,
   MAX_TRAIL_POINTS,
   SIMULATION_WIDTH,
-} from "./constants";
-import type { SimulationAState, Vector2 } from "./types";
+} from './constants';
+import type { SimulationAState, Vector2 } from './types';
 
 // キャラクターの初期位置と接地ラインを事前計算しておく
 const INITIAL_Y = GROUND_Y - CHARACTER_SIZE;

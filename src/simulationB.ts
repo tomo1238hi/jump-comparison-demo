@@ -6,8 +6,8 @@ import {
   JUMP_FORCE,
   MAX_TRAIL_POINTS,
   SIMULATION_WIDTH,
-} from "./constants";
-import type { SimulationBState, Vector2 } from "./types";
+} from './constants';
+import type { SimulationBState, Vector2 } from './types';
 
 // 物理シミュレーション用の座標境界を定義
 const CENTER_X = SIMULATION_WIDTH / 2;

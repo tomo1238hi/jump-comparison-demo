@@ -1,27 +1,27 @@
-import { createAnimationState, startAnimation } from "./animation";
-import { initializeController } from "./controller";
-import { renderInfo, renderSimulations, getCanvasContext } from "./renderer";
+import { createAnimationState, startAnimation } from './animation';
+import { initializeController } from './controller';
+import { renderInfo, renderSimulations, getCanvasContext } from './renderer';
 import {
   createSimulationAState,
   reset as resetSimulationA,
   startJump as startJumpA,
   update as updateSimulationA,
-} from "./simulationA";
+} from './simulationA';
 import {
   createSimulationBState,
   reset as resetSimulationB,
   startJump as startJumpB,
   update as updateSimulationB,
-} from "./simulationB";
+} from './simulationB';
 
 const simulationA = createSimulationAState();
 const simulationB = createSimulationBState();
 const animationState = createAnimationState();
 
-const ctxA = getCanvasContext("canvas-a");
-const ctxB = getCanvasContext("canvas-b");
-const infoA = document.getElementById("info-a");
-const infoB = document.getElementById("info-b");
+const ctxA = getCanvasContext('canvas-a');
+const ctxB = getCanvasContext('canvas-b');
+const infoA = document.getElementById('info-a');
+const infoB = document.getElementById('info-b');
 
 function updateInfoPanels(): void {
   renderInfo(infoA, [
