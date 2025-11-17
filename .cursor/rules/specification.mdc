@@ -65,20 +65,20 @@ jump-comparison-demo/
 ```typescript
 // 物理定数（ピクセル単位、Y軸は下向きが正）
 export const GRAVITY = 980; // ピクセル/秒²（地球の重力に近い値）
-export const JUMP_FORCE = 400; // ピクセル/秒（シミュレーションBの初速）
 export const JUMP_SPEED = 400; // ピクセル/秒（シミュレーションAの等速）
-export const MAX_HEIGHT = 200; // ピクセル（シミュレーションAの最大高度）
+export const MAX_HEIGHT = 260; // ピクセル（両シミュレーションで共有する目標高度）
+export const JUMP_FORCE = Math.sqrt(2 * GRAVITY * MAX_HEIGHT); // シミュレーションBが概ね同じ高さに達するよう算出した初速
 export const GROUND_Y = 400; // ピクセル（地面のY座標）
 
 // キャラクター設定
-export const CHARACTER_SIZE = 20; // ピクセル（キャラクターの半径/サイズ）
-export const CHARACTER_COLOR_A = "#FF6B6B"; // シミュレーションAの色（赤系）
-export const CHARACTER_COLOR_B = "#4ECDC4"; // シミュレーションBの色（青緑系）
+export const CHARACTER_SIZE = 28; // ピクセル（キャラクターの半径/サイズ）
+export const CHARACTER_COLOR_A = "#FF6B6B";
+export const CHARACTER_COLOR_B = "#4ECDC4";
 
 // キャンバス設定
-export const CANVAS_WIDTH = 800; // ピクセル（全体の幅）
-export const CANVAS_HEIGHT = 500; // ピクセル（全体の高さ）
-export const SIMULATION_WIDTH = CANVAS_WIDTH / 2; // 各シミュレーションの幅
+export const CANVAS_WIDTH = 400;
+export const CANVAS_HEIGHT = 500;
+export const SIMULATION_WIDTH = CANVAS_WIDTH;
 ```
 
 ---
@@ -91,7 +91,8 @@ export interface SimulationAState {
   isJumping: boolean;
   isFalling: boolean;
   position: { x: number; y: number };
-  trail: Array<{ x: number; y: number }>; // 軌跡（拡張機能）
+  velocity: { x: number; y: number };
+  trail: Array<{ x: number; y: number }>;
 }
 
 // シミュレーションBの状態
@@ -99,7 +100,7 @@ export interface SimulationBState {
   velocity: { x: number; y: number };
   position: { x: number; y: number };
   isGrounded: boolean;
-  trail: Array<{ x: number; y: number }>; // 軌跡（拡張機能）
+  trail: Array<{ x: number; y: number }>;
 }
 
 // アニメーションループの状態
@@ -128,7 +129,8 @@ export interface AnimationState {
 - `isFalling`: 下降中フラグ
 - `position.y`: 現在の Y 座標（ピクセル）
 - `position.x`: 固定値（シミュレーション領域の中央）
-- `trail`: 軌跡の配列（拡張機能）
+- `velocity.y`: Y 軸の速度（ピクセル/秒）
+- `trail`: 軌跡の配列
 
 #### 主要関数の仕様
 
@@ -140,16 +142,17 @@ export interface AnimationState {
 
 **`update(state: SimulationAState, deltaTime: number): void`**
 
-- 上昇中: `position.y -= JUMP_SPEED * deltaTime`
-- 最大高度到達時: `isJumping = false`, `isFalling = true`
-- 下降中: `position.y += JUMP_SPEED * deltaTime`
-- 地面到達時: `position.y = GROUND_Y`, `isFalling = false`
+- 上昇中: `velocity.y = -JUMP_SPEED`, `position.y += velocity.y * deltaTime`
+- 最大高度到達時: `isJumping = false`, `isFalling = true`, `velocity.y = 0`
+- 下降中: `velocity.y = JUMP_SPEED`, `position.y += velocity.y * deltaTime`
+- 地面到達時: `position.y = GROUND_Y - CHARACTER_SIZE`, `isFalling = false`, `velocity.y = 0`
 - 毎フレーム軌跡を記録
 
 **`reset(state: SimulationAState): void`**
 
 - すべての状態を初期値にリセット
-- `position.y = GROUND_Y`
+- `position.y = GROUND_Y - CHARACTER_SIZE`
+- `velocity = { x: 0, y: 0 }`
 - 軌跡をクリア
 
 ### シミュレーション B: 物理ジャンプ (`src/simulationB.ts`)
@@ -158,8 +161,9 @@ export interface AnimationState {
 
 - **物理計算**: オイラー法による重力シミュレーション
 - **加速度**: `GRAVITY`（下向きが正）
-- **初速**: `-JUMP_FORCE`（上向き）
-- **衝突判定**: 地面との衝突時に速度を 0 にリセット
+- **初速**: `-JUMP_FORCE`（上向き、A と同程度の高さに届くよう算出）
+- **衝突判定**: 地面（`GROUND_Y - CHARACTER_SIZE`）との衝突時に速度を 0 にリセット
+- **高さの扱い**: キャラクターの接地点は `GROUND_Y - CHARACTER_SIZE` なので、実際の頂点は A よりわずかに低い値になる場合がある
 
 #### 状態管理
 
@@ -167,7 +171,7 @@ export interface AnimationState {
 - `position.y`: 現在の Y 座標（ピクセル）
 - `position.x`: 固定値（シミュレーション領域の中央）
 - `isGrounded`: 接地フラグ
-- `trail`: 軌跡の配列（拡張機能）
+- `trail`: 軌跡の配列
 
 #### 主要関数の仕様
 
@@ -184,13 +188,13 @@ export interface AnimationState {
   - 速度更新: `velocity.y += GRAVITY * deltaTime`
   - 位置更新: `position.y += velocity.y * deltaTime`
 - 地面との衝突判定:
-  - `position.y >= GROUND_Y` の場合、`position.y = GROUND_Y`, `velocity.y = 0`, `isGrounded = true`
+  - `position.y >= GROUND_Y - CHARACTER_SIZE` の場合、`position.y = GROUND_Y - CHARACTER_SIZE`, `velocity.y = 0`, `isGrounded = true`
 - 毎フレーム軌跡を記録
 
 **`reset(state: SimulationBState): void`**
 
 - すべての状態を初期値にリセット
-- `velocity.y = 0`, `position.y = GROUND_Y`, `isGrounded = true`
+- `velocity = { x: 0, y: 0 }`, `position.y = GROUND_Y - CHARACTER_SIZE`, `isGrounded = true`
 - 軌跡をクリア
 
 ---
@@ -217,17 +221,14 @@ export interface AnimationState {
 
 1. **背景クリア**: `ctx.clearRect(0, 0, width, height)`
 2. **地面の描画**: 水平線（`GROUND_Y`の位置）
-3. **軌跡の描画**（拡張機能）:
-   - シミュレーション A: 直線で結ぶ（三角形）
-   - シミュレーション B: 曲線で結ぶ（放物線）
-4. **キャラクターの描画**: 円または四角形
-5. **タイトルと数値表示**（拡張機能）
+3. **軌跡の描画**: 過去座標を線で結び半透明表示（両シミュレーション共通）
+4. **キャラクターの描画**: `public/maede-zu-green.png` または `public/maede-zu-orange.png` を `CHARACTER_SIZE` を基準に描画
+5. **タイトルと数値表示**
 
 #### 描画スタイル
 
 - 地面: 黒色（`#333`）、線幅 2px
-- キャラクター A: 赤系（`#FF6B6B`）、半径 `CHARACTER_SIZE`
-- キャラクター B: 青緑系（`#4ECDC4`）、半径 `CHARACTER_SIZE`
+- キャラクター: 各シミュレーション専用のスプライト画像
 - 軌跡: 半透明（`rgba` を使用）
 
 ---
@@ -236,14 +237,18 @@ export interface AnimationState {
 
 ### ボタン配置
 
-- **位置**: 画面下部中央
-- **ボタン 1**: 「ジャンプ！」（`id="jump-btn"`）
-- **ボタン 2**: 「リセット」（`id="reset-btn"`）
+- 各シミュレーションパネル内に個別ジャンプボタンを配置
+  - `id="jump-btn-a"`: シミュレーションAのみジャンプ
+  - `id="jump-btn-b"`: シミュレーションBのみジャンプ
+- 画面下部中央に共通ボタン
+  - `id="jump-btn"`: 両方ジャンプ
+  - `id="reset-btn"`: リセット
 
 ### イベント仕様
 
-- **ジャンプボタン**: 両シミュレーションを同時に開始（シミュレーション B は接地時のみ有効）
-- **リセットボタン**: 両シミュレーションを同時にリセット
+- **個別ジャンプ**: それぞれのボタンで対応するシミュレーションのみ開始
+- **両方ジャンプ**: 両シミュレーションを同時に開始
+- **リセット**: 両シミュレーションの状態を初期化
 
 ---
 
@@ -256,7 +261,7 @@ export interface AnimationState {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ジャンプの比較シミュレーション</title>
-    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
   </head>
   <body>
     <div class="container">
@@ -264,20 +269,26 @@ export interface AnimationState {
 
       <div class="simulations">
         <div class="simulation-panel">
-          <h2>A: 微分方程式なし（等速運動）</h2>
+          <h2>A</h2>
           <canvas id="canvas-a" width="400" height="500"></canvas>
           <div class="info" id="info-a"></div>
+          <div class="panel-actions">
+            <button id="jump-btn-a">Aだけジャンプ</button>
+          </div>
         </div>
 
         <div class="simulation-panel">
-          <h2>B: 微分方程式あり（重力シミュレーション）</h2>
+          <h2>B</h2>
           <canvas id="canvas-b" width="400" height="500"></canvas>
           <div class="info" id="info-b"></div>
+          <div class="panel-actions">
+            <button id="jump-btn-b">Bだけジャンプ</button>
+          </div>
         </div>
       </div>
 
       <div class="controls">
-        <button id="jump-btn">ジャンプ！</button>
+        <button id="jump-btn">両方ジャンプ</button>
         <button id="reset-btn">リセット</button>
       </div>
     </div>
@@ -289,9 +300,9 @@ export interface AnimationState {
 
 ---
 
-## 🎨 CSS スタイル (`src/style.css`)
+## 🎨 CSS スタイル (`styles/main.css`)
 
-**注意**: Vite のデフォルト構成では `src/style.css` に配置されます。プロジェクト構成に応じて適切なパスを指定してください。
+**注意**: 本プロジェクトでは `styles/main.css` を Vite から読み込む構成になっています。
 
 #### レイアウト要件
 
@@ -384,8 +395,7 @@ button:active {
 ### 3. 数値の可視化
 
 - **表示内容**:
-  - シミュレーション A: `position.y`, `isJumping/isFalling`
-  - シミュレーション B: `position.y`, `velocity.y`, `isGrounded`
+  - 両シミュレーション共通: `position.y`, `velocity.y`
 - **更新頻度**: 毎フレーム
 - **表示位置**: 各シミュレーションパネルの下部（`<div class="info">`）
 - **フォーマット**: 数値は小数点以下 1 桁まで表示

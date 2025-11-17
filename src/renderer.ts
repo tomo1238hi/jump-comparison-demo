@@ -30,7 +30,7 @@ let characterSpriteB: HTMLImageElement | null = null
 function getSpriteA(): HTMLImageElement {
   if (!characterSpriteA) {
     characterSpriteA = new Image()
-    characterSpriteA.src = '/public/maede-zu-green.png'
+    characterSpriteA.src = '/maede-zu-green.png'
   }
   return characterSpriteA
 }
@@ -38,7 +38,7 @@ function getSpriteA(): HTMLImageElement {
 function getSpriteB(): HTMLImageElement {
   if (!characterSpriteB) {
     characterSpriteB = new Image()
-    characterSpriteB.src = '/public/maede-zu-orange.png'
+    characterSpriteB.src = '/maede-zu-orange.png'
   }
   return characterSpriteB
 }
