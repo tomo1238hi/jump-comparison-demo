@@ -1,5 +1,6 @@
 import {
   CHARACTER_COLOR_A,
+  CHARACTER_SIZE,
   GROUND_Y,
   JUMP_SPEED,
   MAX_HEIGHT,
@@ -8,14 +9,16 @@ import {
 } from './constants'
 import type { SimulationAState, Vector2 } from './types'
 
-const INITIAL_Y = GROUND_Y
+const INITIAL_Y = GROUND_Y - CHARACTER_SIZE
 const CENTER_X = SIMULATION_WIDTH / 2
+const GROUND_CONTACT_Y = GROUND_Y - CHARACTER_SIZE
 
 export function createSimulationAState(): SimulationAState {
   return {
     isJumping: false,
     isFalling: false,
     position: { x: CENTER_X, y: INITIAL_Y },
+    velocity: { x: 0, y: 0 },
     trail: [],
   }
 }
@@ -27,23 +30,30 @@ export function startJump(state: SimulationAState): void {
 
   state.isJumping = true
   state.isFalling = false
+  state.velocity.y = -JUMP_SPEED
   clearTrail(state)
 }
 
 export function update(state: SimulationAState, deltaTime: number): void {
   if (state.isJumping) {
-    state.position.y -= JUMP_SPEED * deltaTime
+    state.velocity.y = -JUMP_SPEED
+    state.position.y += state.velocity.y * deltaTime
     if (state.position.y <= GROUND_Y - MAX_HEIGHT) {
       state.position.y = GROUND_Y - MAX_HEIGHT
       state.isJumping = false
       state.isFalling = true
+      state.velocity.y = 0
     }
   } else if (state.isFalling) {
-    state.position.y += JUMP_SPEED * deltaTime
-    if (state.position.y >= GROUND_Y) {
-      state.position.y = GROUND_Y
+    state.velocity.y = JUMP_SPEED
+    state.position.y += state.velocity.y * deltaTime
+    if (state.position.y >= GROUND_CONTACT_Y) {
+      state.position.y = GROUND_CONTACT_Y
       state.isFalling = false
+      state.velocity.y = 0
     }
+  } else {
+    state.velocity.y = 0
   }
 
   recordTrail(state, state.position)
@@ -53,6 +63,7 @@ export function reset(state: SimulationAState): void {
   state.isJumping = false
   state.isFalling = false
   state.position = { x: CENTER_X, y: INITIAL_Y }
+  state.velocity = { x: 0, y: 0 }
   clearTrail(state)
 }
 

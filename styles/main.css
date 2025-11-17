@@ -50,6 +50,16 @@ canvas {
   color: #444;
 }
 
+.panel-actions {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.panel-actions button {
+  width: 100%;
+  margin: 0;
+}
+
 .controls {
   text-align: center;
   margin-top: 24px;

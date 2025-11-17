@@ -1,12 +1,14 @@
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  CHARACTER_COLOR_A,
-  CHARACTER_COLOR_B,
   CHARACTER_SIZE,
   GROUND_Y,
 } from './constants'
-import type { SimulationAState, SimulationBState, Vector2 } from './types'
+import type {
+  SimulationAState,
+  SimulationBState,
+  Vector2,
+} from './types'
 
 export function getCanvasContext(id: string): CanvasRenderingContext2D {
   const canvas = document.getElementById(id) as HTMLCanvasElement | null
@@ -22,14 +24,33 @@ export function getCanvasContext(id: string): CanvasRenderingContext2D {
   return ctx
 }
 
+let characterSpriteA: HTMLImageElement | null = null
+let characterSpriteB: HTMLImageElement | null = null
+
+function getSpriteA(): HTMLImageElement {
+  if (!characterSpriteA) {
+    characterSpriteA = new Image()
+    characterSpriteA.src = '/public/maede-zu-green.png'
+  }
+  return characterSpriteA
+}
+
+function getSpriteB(): HTMLImageElement {
+  if (!characterSpriteB) {
+    characterSpriteB = new Image()
+    characterSpriteB.src = '/public/maede-zu-orange.png'
+  }
+  return characterSpriteB
+}
+
 export function renderSimulations(
   ctxA: CanvasRenderingContext2D,
   ctxB: CanvasRenderingContext2D,
   stateA: SimulationAState,
   stateB: SimulationBState,
 ): void {
-  drawScene(ctxA, CHARACTER_COLOR_A, stateA.trail, stateA.position)
-  drawScene(ctxB, CHARACTER_COLOR_B, stateB.trail, stateB.position)
+  drawScene(ctxA, stateA.trail, stateA.position, getSpriteA())
+  drawScene(ctxB, stateB.trail, stateB.position, getSpriteB())
 }
 
 export function renderInfo(element: HTMLElement | null, lines: string[]): void {
@@ -43,14 +64,14 @@ export function renderInfo(element: HTMLElement | null, lines: string[]): void {
 
 function drawScene(
   ctx: CanvasRenderingContext2D,
-  color: string,
   trail: Vector2[],
   position: Vector2,
+  sprite: HTMLImageElement,
 ): void {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
   drawGround(ctx)
-  drawTrail(ctx, trail, color)
-  drawCharacter(ctx, position, color)
+  drawTrail(ctx, trail, '#666')
+  drawCharacter(ctx, position, sprite)
 }
 
 function drawGround(ctx: CanvasRenderingContext2D): void {
@@ -77,11 +98,9 @@ function drawTrail(ctx: CanvasRenderingContext2D, trail: Vector2[], color: strin
   ctx.stroke()
 }
 
-function drawCharacter(ctx: CanvasRenderingContext2D, position: Vector2, color: string): void {
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.arc(position.x, position.y, CHARACTER_SIZE, 0, Math.PI * 2)
-  ctx.fill()
+function drawCharacter(ctx: CanvasRenderingContext2D, position: Vector2, sprite: HTMLImageElement): void {
+  const size = CHARACTER_SIZE * 2
+  ctx.drawImage(sprite, position.x - CHARACTER_SIZE, position.y - CHARACTER_SIZE, size, size)
 }
 
 function applyAlpha(color: string, alpha: number): string {

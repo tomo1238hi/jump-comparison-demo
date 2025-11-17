@@ -1,19 +1,23 @@
 import {
   CHARACTER_COLOR_B,
+  CHARACTER_SIZE,
   GROUND_Y,
   GRAVITY,
   JUMP_FORCE,
+  MAX_HEIGHT,
   MAX_TRAIL_POINTS,
   SIMULATION_WIDTH,
 } from './constants'
 import type { SimulationBState, Vector2 } from './types'
 
 const CENTER_X = SIMULATION_WIDTH / 2
+const TARGET_APEX_Y = GROUND_Y - MAX_HEIGHT
+const GROUND_CONTACT_Y = GROUND_Y - CHARACTER_SIZE
 
 export function createSimulationBState(): SimulationBState {
   return {
     velocity: { x: 0, y: 0 },
-    position: { x: CENTER_X, y: GROUND_Y },
+    position: { x: CENTER_X, y: GROUND_CONTACT_Y },
     isGrounded: true,
     trail: [],
   }
@@ -34,8 +38,13 @@ export function update(state: SimulationBState, deltaTime: number): void {
     state.velocity.y += GRAVITY * deltaTime
     state.position.y += state.velocity.y * deltaTime
 
-    if (state.position.y >= GROUND_Y) {
-      state.position.y = GROUND_Y
+    if (state.velocity.y < 0 && state.position.y <= TARGET_APEX_Y) {
+      state.position.y = TARGET_APEX_Y
+      state.velocity.y = 0
+    }
+
+    if (state.position.y >= GROUND_CONTACT_Y) {
+      state.position.y = GROUND_CONTACT_Y
       state.velocity.y = 0
       state.isGrounded = true
     }
@@ -46,7 +55,7 @@ export function update(state: SimulationBState, deltaTime: number): void {
 
 export function reset(state: SimulationBState): void {
   state.velocity = { x: 0, y: 0 }
-  state.position = { x: CENTER_X, y: GROUND_Y }
+  state.position = { x: CENTER_X, y: GROUND_CONTACT_Y }
   state.isGrounded = true
   clearTrail(state)
 }

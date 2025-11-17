@@ -7,6 +7,7 @@ export interface SimulationAState {
   isJumping: boolean
   isFalling: boolean
   position: Vector2
+  velocity: Vector2
   trail: Vector2[]
 }
 
