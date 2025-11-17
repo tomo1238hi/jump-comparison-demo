@@ -1,0 +1,523 @@
+# 実装方針: ジャンプの比較シミュレーション
+
+このドキュメントは、実装する際の注意事項とベストプラクティスを記載しています。仕様書に基づいて実装を進める際の原則とガイドラインです。
+
+---
+
+## 🎯 実装の基本原則
+
+### 1. 最小の単位で実装していく
+
+**原則**: 一度に大きな変更を行わず、小さな単位で段階的に実装する
+
+#### 実践方法
+
+- **1 つの機能を 1 つのコミットで実装**
+
+  - ✅ 型定義の追加 → コミット
+  - ✅ 関数の実装 → コミット
+  - ✅ テストの追加 → コミット
+  - ❌ 型定義、関数、テストを一度に実装してコミット
+
+- **動作する状態を保つ**
+
+  - 各ステップでコンパイルエラーがない状態を維持
+  - 動作確認できる最小単位で実装
+
+- **段階的な統合**
+  - 各モジュールを独立して実装・テスト
+  - 動作確認後に次のモジュールへ進む
+
+#### 実装順序の例
+
+```
+1. 定数定義（constants.ts）→ テスト → コミット
+2. 型定義（types.ts）→ テスト → コミット
+3. シミュレーションAの基本関数 → テスト → コミット
+4. シミュレーションAの更新処理 → テスト → コミット
+5. シミュレーションBの基本関数 → テスト → コミット
+...
+```
+
+---
+
+### 2. テストを必ず実装する
+
+**原則**: すべての機能に対してテストを実装し、動作を保証する
+
+#### テストツールの選定
+
+このプロジェクトでは **Vitest** を使用します。Vite と統合されており、TypeScript をそのまま使用できます。
+
+#### テスト環境のセットアップ
+
+**1. Vitest のインストール**
+
+```bash
+pnpm add -D vitest @vitest/ui
+```
+
+**2. `package.json` にテストスクリプトを追加**
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  }
+}
+```
+
+**3. `vitest.config.ts` を作成（オプション）**
+
+```typescript
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: "jsdom",
+  },
+});
+```
+
+**4. テストファイルの配置**
+
+- テストファイルは `src/` 配下に `*.test.ts` または `*.spec.ts` として配置
+- 例: `src/simulationA.test.ts`
+
+**5. テストの実行**
+
+```bash
+# テストを実行
+pnpm test
+
+# UIモードで実行（推奨）
+pnpm test:ui
+
+# カバレッジを確認
+pnpm test:coverage
+```
+
+#### テストの重要性
+
+- **回帰バグの防止**: 既存機能が壊れていないことを確認
+- **リファクタリングの安全性**: 動作を保証しながら改善可能
+- **仕様の明確化**: テストが仕様のドキュメントとして機能
+
+#### テスト実装のルール
+
+- **実装と同時にテストを書く**
+
+  - ✅ 関数を実装 → すぐにテストを書く
+  - ❌ すべての実装が終わってからテストを書く
+
+- **テストカバレッジを意識する**
+
+  - 正常系だけでなく異常系もテスト
+  - 境界値のテストを忘れない
+
+- **テストの独立性**
+  - 各テストは独立して実行可能
+  - テストの実行順序に依存しない
+
+#### テストの書き方の例
+
+```typescript
+// src/simulationA.test.ts
+import { describe, it, expect } from "vitest";
+import { createSimulationA, startJump, update, reset } from "./simulationA";
+import { GROUND_Y, MAX_HEIGHT, JUMP_SPEED } from "./constants";
+
+describe("SimulationA", () => {
+  it("初期状態が正しく設定される", () => {
+    const state = createSimulationA();
+    expect(state.isJumping).toBe(false);
+    expect(state.isFalling).toBe(false);
+    expect(state.position.y).toBe(GROUND_Y);
+  });
+
+  it("ジャンプ開始時に状態が正しく遷移する", () => {
+    const state = createSimulationA();
+    startJump(state);
+    expect(state.isJumping).toBe(true);
+    expect(state.isFalling).toBe(false);
+  });
+
+  it("上昇中に位置が正しく更新される", () => {
+    const state = createSimulationA();
+    startJump(state);
+    update(state, 0.1); // 0.1秒経過
+    expect(state.position.y).toBeLessThan(GROUND_Y);
+  });
+});
+```
+
+#### テストすべき項目の例
+
+**シミュレーション A**
+
+- ジャンプ開始時の状態遷移
+- 上昇中の位置更新
+- 最大高度到達時の状態遷移
+- 下降中の位置更新
+- 地面到達時の状態遷移
+- リセット時の初期化
+
+**シミュレーション B**
+
+- ジャンプ開始時の初速設定
+- 物理計算の正確性（オイラー法）
+- 衝突判定の正確性
+- リセット時の初期化
+
+---
+
+### 3. 型安全性を最優先にする
+
+**原則**: TypeScript の型システムを最大限活用し、実行時エラーを防ぐ
+
+#### 実践方法
+
+- **型定義を先に作成**
+
+  - 実装前に型を定義することで、設計を明確化
+  - 型エラーを早期に発見
+
+- **`any` を使わない**
+
+  - 型が不明な場合は適切な型を定義
+  - `unknown` を使用して型安全に処理
+
+- **strict mode を有効にする**
+  - `tsconfig.json` で strict オプションを有効化
+  - null/undefined チェックを徹底
+
+#### 型定義の例
+
+```typescript
+// ❌ 悪い例: any を使用
+function update(state: any, deltaTime: number): void {
+  state.position.y += deltaTime;
+}
+
+// ✅ 良い例: 適切な型を定義
+function update(state: SimulationAState, deltaTime: number): void {
+  state.position.y += JUMP_SPEED * deltaTime;
+}
+```
+
+---
+
+### 4. エラーハンドリングを適切に実装する
+
+**原則**: 想定外の状況に対応できるよう、エラーハンドリングを実装する
+
+#### 実践方法
+
+- **null チェックを徹底**
+
+  - DOM 要素の取得時
+  - Canvas コンテキストの取得時
+  - オプショナルな値の使用時
+
+- **ガード節を使用**
+
+  - 関数の最初で不正な状態をチェック
+  - 早期リターンでネストを減らす
+
+- **エラーメッセージを明確に**
+  - 何が問題なのかを明確に示す
+  - デバッグに役立つ情報を含める
+
+#### エラーハンドリングの例
+
+```typescript
+// ✅ 良い例: ガード節と明確なエラーメッセージ
+export function startJump(state: SimulationAState): void {
+  if (state.isJumping || state.isFalling) {
+    return; // 既にジャンプ中なら何もしない
+  }
+
+  state.isJumping = true;
+  state.isFalling = false;
+}
+
+// ✅ 良い例: null チェックとエラーメッセージ
+export function initializeRenderer() {
+  const canvas = document.getElementById("canvas-a");
+  if (!canvas) {
+    throw new Error("Canvas element 'canvas-a' not found in DOM");
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Failed to get 2d context from canvas");
+  }
+
+  return ctx;
+}
+```
+
+---
+
+### 5. パフォーマンスを意識する
+
+**原則**: パフォーマンスを考慮した実装を行う
+
+#### 実践方法
+
+- **不要な計算を避ける**
+
+  - 毎フレーム実行される処理は最適化
+  - キャッシュを活用
+
+- **メモリリークを防ぐ**
+
+  - イベントリスナーの適切な削除
+  - 配列の無制限な増加を防ぐ
+
+- **描画の最適化**
+  - 不要な再描画を避ける
+  - Canvas の描画処理を効率化
+
+#### パフォーマンス最適化の例
+
+```typescript
+// ❌ 悪い例: 無制限に配列が増加
+state.trail.push({ x: state.position.x, y: state.position.y });
+
+// ✅ 良い例: 最大数を制限
+if (state.trail.length < 1000) {
+  state.trail.push({ x: state.position.x, y: state.position.y });
+}
+```
+
+---
+
+### 6. コードの可読性を重視する
+
+**原則**: 他の開発者（未来の自分を含む）が理解しやすいコードを書く
+
+#### 実践方法
+
+- **意味のある変数名・関数名を使用**
+
+  - 略語を避ける
+  - 処理内容が名前から分かる
+
+- **コメントを適切に書く**
+
+  - 「なぜ」を説明するコメント
+  - 「何を」するかはコードで表現
+
+- **関数を小さく保つ**
+  - 1 つの関数は 1 つの責任
+  - 長すぎる関数は分割
+
+#### 可読性の例
+
+```typescript
+// ❌ 悪い例: 意味が不明確
+function calc(s: any, dt: number): void {
+  s.y -= 400 * dt;
+}
+
+// ✅ 良い例: 明確な名前とコメント
+/**
+ * シミュレーションAの状態を更新する
+ * @param state - 更新する状態
+ * @param deltaTime - 前フレームからの経過時間（秒）
+ */
+function update(state: SimulationAState, deltaTime: number): void {
+  if (state.isJumping) {
+    // 等速で上昇（JUMP_SPEED ピクセル/秒）
+    state.position.y -= JUMP_SPEED * deltaTime;
+  }
+}
+```
+
+---
+
+### 7. 物理計算の正確性を保証する
+
+**原則**: 物理シミュレーションの正確性を最優先にする
+
+#### 実践方法
+
+- **単位を統一する**
+
+  - ピクセル、秒などの単位を明確に
+  - 単位変換のミスを防ぐ
+
+- **座標系を意識する**
+
+  - Y 軸が下向きが正であることを常に意識
+  - 符号のミスを防ぐ
+
+- **数値の精度を考慮**
+  - 浮動小数点誤差を考慮した判定
+  - 境界値の処理を正確に
+
+#### 物理計算の例
+
+```typescript
+// ✅ 良い例: 単位と座標系を明確に
+// Y軸は下向きが正、速度はピクセル/秒
+state.velocity.y += GRAVITY * deltaTime; // GRAVITY はピクセル/秒²
+state.position.y += state.velocity.y * deltaTime;
+
+// 地面との衝突判定（位置補正を正確に）
+if (state.position.y >= GROUND_Y) {
+  state.position.y = GROUND_Y; // 正確な位置に補正
+  state.velocity.y = 0;
+  state.isGrounded = true;
+}
+```
+
+---
+
+## 📋 実装時のチェックリスト
+
+各機能を実装する際に、以下の項目を確認してください：
+
+### 実装前
+
+- [ ] 仕様書を確認し、要件を理解した
+- [ ] 型定義を作成した
+- [ ] 実装方針を明確にした
+
+### 実装中
+
+- [ ] 最小の単位で実装している
+- [ ] 型安全性を保っている（`any` を使っていない）
+- [ ] エラーハンドリングを実装している
+- [ ] コードが読みやすい（意味のある名前、適切なコメント）
+- [ ] パフォーマンスを考慮している
+
+### 実装後
+
+- [ ] テストを実装した
+- [ ] テストがすべて通る
+- [ ] コンパイルエラーがない
+- [ ] ブラウザのコンソールにエラーが出ない
+- [ ] 動作確認をした
+- [ ] コードレビューをした（可能な場合）
+
+---
+
+## 🚫 実装時に避けるべきこと
+
+### 1. 一度に大きな変更を行う
+
+**問題**: バグの原因を特定しにくい、レビューが困難
+
+**解決**: 小さな単位で段階的に実装
+
+### 2. テストを後回しにする
+
+**問題**: バグが発見されにくい、リファクタリングが困難
+
+**解決**: 実装と同時にテストを書く
+
+### 3. 型安全性を無視する
+
+**問題**: 実行時エラーが発生しやすい
+
+**解決**: TypeScript の型システムを最大限活用
+
+### 4. エラーハンドリングを省略する
+
+**問題**: 予期しない動作やクラッシュの原因
+
+**解決**: null チェック、ガード節を適切に実装
+
+### 5. パフォーマンスを無視する
+
+**問題**: 長時間実行時のメモリリーク、フレームレートの低下
+
+**解決**: 配列の制限、イベントリスナーのクリーンアップ
+
+### 6. マジックナンバーを使用する
+
+**問題**: 意味が不明確、変更が困難
+
+**解決**: 定数として定義し、意味のある名前を付ける
+
+```typescript
+// ❌ 悪い例
+if (state.position.y <= 400 - 200) {
+  // 400 と 200 の意味が不明確
+}
+
+// ✅ 良い例
+if (state.position.y <= GROUND_Y - MAX_HEIGHT) {
+  // 意味が明確
+}
+```
+
+---
+
+## 🔄 実装の流れ（推奨）
+
+### 1. 計画フェーズ
+
+1. 仕様書を確認
+2. 実装する機能を明確化
+3. 型定義を作成
+4. 実装方針を決定
+
+### 2. 実装フェーズ
+
+1. 最小の単位で実装
+2. 動作確認
+3. テストを実装
+4. テストが通ることを確認
+5. コミット
+
+### 3. 統合フェーズ
+
+1. 各モジュールを統合
+2. 統合テストを実行
+3. 動作確認
+4. パフォーマンステスト
+
+### 4. レビューフェーズ
+
+1. コードレビュー
+2. 改善点の反映
+3. 最終確認
+
+---
+
+## 💡 実装のヒント
+
+### デバッグしやすいコードを書く
+
+- ログを適切に出力（開発時のみ）
+- 状態を確認しやすい構造にする
+- エラーメッセージを明確に
+
+### リファクタリングを恐れない
+
+- 動作するコードでも改善の余地がある
+- テストがあれば安全にリファクタリング可能
+- 小さな改善を積み重ねる
+
+### ドキュメントを書く
+
+- 複雑なロジックにはコメントを
+- 関数の目的と使い方を明確に
+- 仕様書と実装の整合性を保つ
+
+---
+
+## 📚 参考資料
+
+実装時の参考になる資料：
+
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
+- [Clean Code](https://www.amazon.co.jp/dp/4048676881)
+- [リファクタリング](https://www.amazon.co.jp/dp/4274224546)
+- [テスト駆動開発](https://www.amazon.co.jp/dp/4274217884)

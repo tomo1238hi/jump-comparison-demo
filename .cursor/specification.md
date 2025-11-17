@@ -1,0 +1,400 @@
+# 仕様書: ジャンプの比較シミュレーション
+
+## 📋 プロジェクト概要
+
+物理シミュレーションの有無によるジャンプ挙動の違いを視覚化し、ゲームプログラミング初学者が「ふわっと感（加減速）」を体感できる教育用 Web ページを実装する。
+
+---
+
+## 🛠️ 技術スタック
+
+### 必須技術
+
+- **言語**: TypeScript (strict mode)
+- **ビルドツール**: Vite
+- **フレームワーク**: なし（Vanilla TypeScript）
+- **描画**: HTML5 Canvas API
+- **スタイリング**: CSS3
+- **パッケージ管理**: **pnpm（必須）** - `npm`や`yarn`は使用禁止
+- **開発環境**: Dev Container（VS Code Dev Containers）
+
+### 技術選定理由
+
+- **TypeScript**: 型安全性により物理計算のバグを早期発見
+- **Vite**: 高速な開発サーバーとビルド
+- **Vanilla**: フレームワークの学習コストを排除し、物理計算に集中
+- **Canvas API**: 滑らかなアニメーションと軌跡描画に最適
+- **pnpm**: 高速でディスク効率の良いパッケージ管理
+- **Dev Container**: 開発環境の統一と再現性の確保
+
+---
+
+## 📁 プロジェクト構成
+
+```
+jump-comparison-demo/
+├── .devcontainer/
+│   └── devcontainer.json          # Dev Container設定
+├── .cursor/
+│   ├── rules.md                   # Cursor Rules（このファイルへの参照）
+│   ├── specification.md           # 仕様書（このファイル）
+│   └── implementation-guide.md    # 実装方針
+├── index.html                      # エントリーポイント
+├── src/
+│   ├── main.ts                    # アプリケーション初期化
+│   ├── constants.ts               # 物理定数と設定値
+│   ├── types.ts                   # TypeScript型定義
+│   ├── simulationA.ts             # 等速ジャンプシミュレーション
+│   ├── simulationB.ts             # 物理ジャンプシミュレーション
+│   ├── renderer.ts                # Canvas描画ロジック
+│   ├── controller.ts              # UIコントローラー
+│   └── animation.ts               # アニメーションループ管理
+├── styles/
+│   └── main.css                   # スタイルシート
+├── package.json
+├── pnpm-lock.yaml                 # pnpmロックファイル
+├── tsconfig.json
+└── vite.config.ts
+```
+
+---
+
+## 📐 定数定義 (`src/constants.ts`)
+
+```typescript
+// 物理定数（ピクセル単位、Y軸は下向きが正）
+export const GRAVITY = 980; // ピクセル/秒²（地球の重力に近い値）
+export const JUMP_FORCE = 400; // ピクセル/秒（シミュレーションBの初速）
+export const JUMP_SPEED = 400; // ピクセル/秒（シミュレーションAの等速）
+export const MAX_HEIGHT = 200; // ピクセル（シミュレーションAの最大高度）
+export const GROUND_Y = 400; // ピクセル（地面のY座標）
+
+// キャラクター設定
+export const CHARACTER_SIZE = 20; // ピクセル（キャラクターの半径/サイズ）
+export const CHARACTER_COLOR_A = "#FF6B6B"; // シミュレーションAの色（赤系）
+export const CHARACTER_COLOR_B = "#4ECDC4"; // シミュレーションBの色（青緑系）
+
+// キャンバス設定
+export const CANVAS_WIDTH = 800; // ピクセル（全体の幅）
+export const CANVAS_HEIGHT = 500; // ピクセル（全体の高さ）
+export const SIMULATION_WIDTH = CANVAS_WIDTH / 2; // 各シミュレーションの幅
+```
+
+---
+
+## 📝 型定義 (`src/types.ts`)
+
+```typescript
+// シミュレーションAの状態
+export interface SimulationAState {
+  isJumping: boolean;
+  isFalling: boolean;
+  position: { x: number; y: number };
+  trail: Array<{ x: number; y: number }>; // 軌跡（拡張機能）
+}
+
+// シミュレーションBの状態
+export interface SimulationBState {
+  velocity: { x: number; y: number };
+  position: { x: number; y: number };
+  isGrounded: boolean;
+  trail: Array<{ x: number; y: number }>; // 軌跡（拡張機能）
+}
+
+// アニメーションループの状態
+export interface AnimationState {
+  isRunning: boolean;
+  lastTime: number;
+}
+```
+
+---
+
+## 🎮 シミュレーション仕様
+
+### シミュレーション A: 等速ジャンプ (`src/simulationA.ts`)
+
+#### 動作仕様
+
+- **上昇**: 等速で上昇（速度: `JUMP_SPEED`）
+- **下降**: 等速で下降（速度: `JUMP_SPEED`）
+- **最大高度**: `GROUND_Y - MAX_HEIGHT`
+- **状態遷移**: 静止 → 上昇 → 下降 → 静止
+
+#### 状態管理
+
+- `isJumping`: 上昇中フラグ
+- `isFalling`: 下降中フラグ
+- `position.y`: 現在の Y 座標（ピクセル）
+- `position.x`: 固定値（シミュレーション領域の中央）
+- `trail`: 軌跡の配列（拡張機能）
+
+#### 主要関数の仕様
+
+**`startJump(state: SimulationAState): void`**
+
+- 静止状態の時のみジャンプを開始
+- `isJumping` を `true`、`isFalling` を `false` に設定
+- 軌跡をリセット
+
+**`update(state: SimulationAState, deltaTime: number): void`**
+
+- 上昇中: `position.y -= JUMP_SPEED * deltaTime`
+- 最大高度到達時: `isJumping = false`, `isFalling = true`
+- 下降中: `position.y += JUMP_SPEED * deltaTime`
+- 地面到達時: `position.y = GROUND_Y`, `isFalling = false`
+- 毎フレーム軌跡を記録
+
+**`reset(state: SimulationAState): void`**
+
+- すべての状態を初期値にリセット
+- `position.y = GROUND_Y`
+- 軌跡をクリア
+
+### シミュレーション B: 物理ジャンプ (`src/simulationB.ts`)
+
+#### 動作仕様
+
+- **物理計算**: オイラー法による重力シミュレーション
+- **加速度**: `GRAVITY`（下向きが正）
+- **初速**: `-JUMP_FORCE`（上向き）
+- **衝突判定**: 地面との衝突時に速度を 0 にリセット
+
+#### 状態管理
+
+- `velocity.y`: Y 軸の速度（ピクセル/秒、下向きが正）
+- `position.y`: 現在の Y 座標（ピクセル）
+- `position.x`: 固定値（シミュレーション領域の中央）
+- `isGrounded`: 接地フラグ
+- `trail`: 軌跡の配列（拡張機能）
+
+#### 主要関数の仕様
+
+**`startJump(state: SimulationBState): void`**
+
+- 接地時のみジャンプを開始
+- `velocity.y = -JUMP_FORCE`（上向きの初速）
+- `isGrounded = false`
+- 軌跡をリセット
+
+**`update(state: SimulationBState, deltaTime: number): void`**
+
+- 非接地時のみ更新:
+  - 速度更新: `velocity.y += GRAVITY * deltaTime`
+  - 位置更新: `position.y += velocity.y * deltaTime`
+- 地面との衝突判定:
+  - `position.y >= GROUND_Y` の場合、`position.y = GROUND_Y`, `velocity.y = 0`, `isGrounded = true`
+- 毎フレーム軌跡を記録
+
+**`reset(state: SimulationBState): void`**
+
+- すべての状態を初期値にリセット
+- `velocity.y = 0`, `position.y = GROUND_Y`, `isGrounded = true`
+- 軌跡をクリア
+
+---
+
+## 🎨 描画仕様
+
+### アニメーションループ (`src/animation.ts`)
+
+#### 要件
+
+- `requestAnimationFrame` を使用
+- `deltaTime` を秒単位で計算（ミリ秒から変換）
+- 最大 `deltaTime` を制限（0.1 秒）して異常値に対応
+- 両シミュレーションを同期して更新
+
+### 描画ロジック (`src/renderer.ts`)
+
+#### Canvas 設定
+
+- 2 つの Canvas 要素を使用（左: A、右: B）
+- または 1 つの Canvas を 2 分割して描画
+
+#### 描画順序（各フレーム）
+
+1. **背景クリア**: `ctx.clearRect(0, 0, width, height)`
+2. **地面の描画**: 水平線（`GROUND_Y`の位置）
+3. **軌跡の描画**（拡張機能）:
+   - シミュレーション A: 直線で結ぶ（三角形）
+   - シミュレーション B: 曲線で結ぶ（放物線）
+4. **キャラクターの描画**: 円または四角形
+5. **タイトルと数値表示**（拡張機能）
+
+#### 描画スタイル
+
+- 地面: 黒色（`#333`）、線幅 2px
+- キャラクター A: 赤系（`#FF6B6B`）、半径 `CHARACTER_SIZE`
+- キャラクター B: 青緑系（`#4ECDC4`）、半径 `CHARACTER_SIZE`
+- 軌跡: 半透明（`rgba` を使用）
+
+---
+
+## 🎛️ UI 仕様
+
+### ボタン配置
+
+- **位置**: 画面下部中央
+- **ボタン 1**: 「ジャンプ！」（`id="jump-btn"`）
+- **ボタン 2**: 「リセット」（`id="reset-btn"`）
+
+### イベント仕様
+
+- **ジャンプボタン**: 両シミュレーションを同時に開始（シミュレーション B は接地時のみ有効）
+- **リセットボタン**: 両シミュレーションを同時にリセット
+
+---
+
+## 📄 HTML 構造 (`index.html`)
+
+```html
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ジャンプの比較シミュレーション</title>
+    <link rel="stylesheet" href="/styles/main.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>ジャンプの比較シミュレーション</h1>
+
+      <div class="simulations">
+        <div class="simulation-panel">
+          <h2>A: 微分方程式なし（等速運動）</h2>
+          <canvas id="canvas-a" width="400" height="500"></canvas>
+          <div class="info" id="info-a"></div>
+        </div>
+
+        <div class="simulation-panel">
+          <h2>B: 微分方程式あり（重力シミュレーション）</h2>
+          <canvas id="canvas-b" width="400" height="500"></canvas>
+          <div class="info" id="info-b"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="jump-btn">ジャンプ！</button>
+        <button id="reset-btn">リセット</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+```
+
+---
+
+## 🎨 CSS スタイル (`styles/main.css`)
+
+#### レイアウト要件
+
+- フレックスボックスまたはグリッドで左右 2 分割
+- レスポンシブ対応（最小幅 800px）
+- 中央揃え
+
+#### スタイル仕様
+
+```css
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f5f5;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.simulations {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.simulation-panel {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+canvas {
+  display: block;
+  border: 1px solid #ddd;
+  background: #fafafa;
+}
+
+.controls {
+  text-align: center;
+  margin-top: 20px;
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 16px;
+  margin: 0 10px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #4ecdc4;
+  color: white;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #45b8b0;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+```
+
+---
+
+## 🚀 拡張機能仕様
+
+### 1. 軌跡の描画
+
+- **実装方法**: 各フレームで `position` を配列に記録し、`ctx.lineTo()` で描画
+- **シミュレーション A**: 直線で結ぶ（三角形の軌跡）
+- **シミュレーション B**: 曲線で結ぶ（放物線の軌跡）
+- **視覚化**: 半透明の線（`rgba` を使用）
+- **最大記録数**: 制限なし（必要に応じて最適化可能）
+
+### 2. パラメータ調整スライダー
+
+- **配置**: コントロールエリアに追加
+- **スライダー 1**: `GRAVITY` (0-2000 px/s²)
+- **スライダー 2**: `JUMP_FORCE` (0-800 px/s)
+- **スライダー 3**: `JUMP_SPEED` (0-800 px/s)
+- **リアルタイム反映**: スライダー変更時に定数を更新
+- **UI**: ラベル付きスライダー、現在値を表示
+
+### 3. 数値の可視化
+
+- **表示内容**:
+  - シミュレーション A: `position.y`, `isJumping/isFalling`
+  - シミュレーション B: `position.y`, `velocity.y`, `isGrounded`
+- **更新頻度**: 毎フレーム
+- **表示位置**: 各シミュレーションパネルの下部（`<div class="info">`）
+- **フォーマット**: 数値は小数点以下 1 桁まで表示
+
+---
+
+## ✅ 動作要件
+
+- ボタン操作で常に両シミュレーションが同期して開始・停止すること
+- シミュレーション A が等速度で上下移動し、B が加速度によって滑らかに変化すること
+- リセット後に双方の状態が完全初期化されること
+- `deltaTime` が正しく計算され、フレームレートに依存しないこと
+- キャラクターが地面からはみ出さないこと
+- TypeScript の型エラーがないこと
+- ブラウザのコンソールにエラーが出ないこと

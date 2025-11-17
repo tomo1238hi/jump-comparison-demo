@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ジャンプの比較シミュレーション</title>
+  <link rel="stylesheet" href="/styles/main.css" />
+</head>
+
+<body>
+  <div class="container">
+    <h1>ジャンプの比較シミュレーション</h1>
+
+    <div class="simulations">
+      <div class="simulation-panel">
+        <h2>A: 微分方程式なし（等速運動）</h2>
+        <canvas id="canvas-a" width="400" height="500"></canvas>
+        <div class="info" id="info-a"></div>
+      </div>
+
+      <div class="simulation-panel">
+        <h2>B: 微分方程式あり（重力シミュレーション）</h2>
+        <canvas id="canvas-b" width="400" height="500"></canvas>
+        <div class="info" id="info-b"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="jump-btn">ジャンプ！</button>
+      <button id="reset-btn">リセット</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
