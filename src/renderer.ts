@@ -1,37 +1,41 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH, CHARACTER_SIZE, GROUND_Y } from './constants';
-import type { SimulationAState, SimulationBState, Vector2 } from './types';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, CHARACTER_SIZE, GROUND_Y } from './constants'
+import type { SimulationAState, SimulationBState, Vector2 } from './types'
 
 export function getCanvasContext(id: string): CanvasRenderingContext2D {
-  const canvas = document.getElementById(id) as HTMLCanvasElement | null;
+  const canvas = document.getElementById(id) as HTMLCanvasElement | null
   if (!canvas) {
     throw new Error(`Canvas element "${id}" が見つかりません`);
   }
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d')
   if (!ctx) {
     throw new Error(`Canvas "${id}" から 2D コンテキストを取得できません`);
   }
-  canvas.width = CANVAS_WIDTH;
-  canvas.height = CANVAS_HEIGHT;
-  return ctx;
+  canvas.width = CANVAS_WIDTH
+  canvas.height = CANVAS_HEIGHT
+  return ctx
 }
 
-let characterSpriteA: HTMLImageElement | null = null;
-let characterSpriteB: HTMLImageElement | null = null;
+const ASSET_BASE_URL = import.meta.env.BASE_URL ?? '/'
+const SPRITE_A_URL = `${ASSET_BASE_URL}maede-zu-green.png`
+const SPRITE_B_URL = `${ASSET_BASE_URL}maede-zu-orange.png`
+
+let characterSpriteA: HTMLImageElement | null = null
+let characterSpriteB: HTMLImageElement | null = null
 
 function getSpriteA(): HTMLImageElement {
   if (!characterSpriteA) {
-    characterSpriteA = new Image();
-    characterSpriteA.src = '/maede-zu-green.png';
+    characterSpriteA = new Image()
+    characterSpriteA.src = SPRITE_A_URL
   }
-  return characterSpriteA;
+  return characterSpriteA
 }
 
 function getSpriteB(): HTMLImageElement {
   if (!characterSpriteB) {
-    characterSpriteB = new Image();
-    characterSpriteB.src = '/maede-zu-orange.png';
+    characterSpriteB = new Image()
+    characterSpriteB.src = SPRITE_B_URL
   }
-  return characterSpriteB;
+  return characterSpriteB
 }
 
 export function renderSimulations(
